@@ -23,12 +23,15 @@ template_svg = """<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 	<text alignement-baseline="baseline" text-anchor="start" style="font-style:normal;font-weight:normal;font-size:384px;font-family:sans-serif;fill:#000000;stroke:none" x="96" y="384">{c}</text>
 </svg>"""
 
-def compute_sdf(img, radius=8) :
+def compute_sdf(img, radius=16) :
 	w, h = img.shape
 	sdf = 1.0 - img
 	img = np.hstack((np.ones((h, radius)), img, np.ones((h, radius))))
 	img = np.vstack((np.ones((radius, 2*radius+w)), img, np.ones((radius, 2*radius+w))))
-	x, y = np.mgrid[-radius:radius+1, -radius:radius+1]
+	m = np.mgrid[-radius:radius+1, -radius:radius+1].astype(np.float64)
+	m[m > 0.0] -= 0.5 + (1 / (2*radius))
+	m[m < 0.0] += 0.5
+	x, y = m
 	knl = np.sqrt(x**2 + y**2)
 
 	inside = np.where(img < 0.5, True, False)
@@ -56,6 +59,8 @@ sdf_dir = Path("sdf").make_dirs()
 
 for i in range(128) :
 	c = chr(i)
+	# if c != 'M' :
+	# 	continue
 	if c.isprintable() and c.strip() :
 		if not (svg_dir / f"{i:02X}.svg").is_file() :
 			(svg_dir / f"{i:02X}.svg").write_text(template_svg.format(c=c))
